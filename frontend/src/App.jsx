@@ -11,9 +11,18 @@ export default function App() {
   const [focus, setFocus] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [slow, setSlow] = useState(false);
   useEffect(() => {
     wakeServer();
   }, []);
+  useEffect(() => {
+    if (!loading) {
+      setSlow(false);
+      return;
+    }
+    const timer = setTimeout(() => setSlow(true), 8000);
+    return () => clearTimeout(timer);
+  }, [loading]);
   async function run(payload) {
     setLoading(true);
     setError("");
@@ -101,8 +110,9 @@ export default function App() {
         />
         {loading && (
           <div className="busy">
-            Fetching routes and forecasts… the first request can take up to 30
-            seconds if the server was asleep.
+            {slow
+              ? "Still working. The server may have been asleep, so this can take up to 30 seconds."
+              : "Fetching routes and forecasts…"}
           </div>
         )}
       </main>
