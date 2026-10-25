@@ -1,9 +1,11 @@
-export const LEVELS = ['Low', 'Moderate', 'High', 'Severe', 'No Travel'];
-export const COLORS = ['#2f9e5b', '#e3b505', '#ef8a1f', '#d7372b', '#6b21a8'];
-export const ROUTE_COLORS = ['#1d4ed8', '#0e7490', '#374151'];
-export const NO_DATA_COLOR = '#9aa5ad';
+export const LEVELS = ["Low", "Moderate", "High", "Severe", "No Travel"];
+export const COLORS = ["#2f9e5b", "#e3b505", "#ef8a1f", "#d7372b", "#6b21a8"];
+export const ROUTE_COLORS = ["#1d4ed8", "#0e7490", "#374151"];
+export const NO_DATA_COLOR = "#9aa5ad";
 
-const RGB = COLORS.map((hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)));
+const RGB = COLORS.map((hex) =>
+  [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)),
+);
 
 /** Smooth colour for a fractional risk level (0 = Low ... 4 = No Travel). */
 export function colorAt(v) {
@@ -15,21 +17,36 @@ export function colorAt(v) {
 }
 
 export function esc(s) {
-  return String(s).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+  return String(s).replace(
+    /[&<>"']/g,
+    (ch) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
+        ch
+      ],
+  );
 }
 
 export function fmtDuration(minutes) {
   const h = Math.floor(minutes / 60);
   const m = Math.round(minutes % 60);
-  return h ? `${h}h ${String(m).padStart(2, '0')}m` : `${m}m`;
+  return h ? `${h}h ${String(m).padStart(2, "0")}m` : `${m}m`;
 }
 
 export function fmtDateTime(value) {
-  return new Date(value).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  return new Date(value).toLocaleString([], {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 export function fmtTime(value) {
-  return new Date(value).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  return new Date(value).toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 /** [lat, lng] at `mile` along a path of [lat, lng, mile] vertices. */
@@ -95,4 +112,92 @@ export function blendLevel(va, vb, f) {
   if (va < 0) return vb;
   if (vb < 0) return va;
   return va + (vb - va) * f;
+}
+
+/** Miles travelled at a given time (ms), by interpolating between checkpoint ETAs. */
+export function mileAtTime(checkpoints, whenMs) {
+  const times = checkpoints.map((c) => new Date(c.eta).getTime());
+  const last = checkpoints.length - 1;
+  if (whenMs <= times[0]) return checkpoints[0].mile;
+  if (whenMs >= times[last]) return checkpoints[last].mile;
+  let lo = 0;
+  let hi = last;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (times[mid] <= whenMs) lo = mid;
+    else hi = mid;
+  }
+  const span = times[hi] - times[lo];
+  const f = span > 0 ? (whenMs - times[lo]) / span : 0;
+  return (
+    checkpoints[lo].mile + f * (checkpoints[hi].mile - checkpoints[lo].mile)
+  );
+}
+
+/**
+ * Where the truck is on `route` at slider hour `hour`, and the weather it meets there.
+ * Returns { mile, latlng, flipped, level, arrived }. level is fractional (-1 = no forecast).
+ */
+export function truckState(route, hour, heatBaseIso) {
+  const cps = route.checkpoints;
+  const when = new Date(heatBaseIso).getTime() + hour * 3600 * 1000;
+  const mile = mileAtTime(cps, when);
+  const latlng = pointAt(route.path, mile);
+  const ahead = pointAt(route.path, mile + 2);
+  const { a, b, f } = bracket(
+    cps.map((c) => c.mile),
+    mile,
+  );
+  return {
+    mile,
+    latlng,
+    flipped: ahead[1] < latlng[1] - 1e-6, // heading west: mirror the truck icon
+    level: blendLevel(cps[a].heat[hour], cps[b].heat[hour], f),
+    arrived: when >= new Date(cps[cps.length - 1].eta).getTime(),
+  };
+}
+
+/**
+ * The most dangerous part of a route: the longest run of neighbouring checkpoints that share the
+ * route's highest risk level. Miles use the same "halfway to the neighbours" idea as the backend,
+ * so they agree with the Severe/High miles on the route cards.
+ * Returns null when no checkpoint has a forecast.
+ */
+export function worstStretch(route) {
+  const cps = route.checkpoints;
+  const levels = cps.map((c) => (c.has_data ? c.level : -1));
+  const top = Math.max(...levels);
+  if (top < 0) return null;
+
+  const last = cps.length - 1;
+  const startEdge = (i) => (i === 0 ? 0 : (cps[i - 1].mile + cps[i].mile) / 2);
+  const endEdge = (i) =>
+    i === last ? route.distance_miles : (cps[i].mile + cps[i + 1].mile) / 2;
+
+  let best = null;
+  let i = 0;
+  while (i <= last) {
+    if (levels[i] !== top) {
+      i++;
+      continue;
+    }
+    let j = i;
+    while (j < last && levels[j + 1] === top) j++;
+    const miles = endEdge(j) - startEdge(i);
+    if (!best || miles > best.miles) best = { first: i, last: j, miles };
+    i = j + 1;
+  }
+
+  const run = cps.slice(best.first, best.last + 1);
+  const middle = run[Math.floor(run.length / 2)];
+  return {
+    level: top,
+    startMile: startEdge(best.first),
+    endMile: endEdge(best.last),
+    miles: best.miles,
+    from: run[0].eta,
+    to: run[run.length - 1].eta,
+    drivers: [...new Set(run.flatMap((c) => c.drivers))],
+    focus: { lat: middle.lat, lng: middle.lng },
+  };
 }

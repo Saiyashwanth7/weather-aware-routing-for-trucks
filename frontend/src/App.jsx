@@ -4,14 +4,18 @@ import TripForm from "./components/TripForm.jsx";
 import RouteList from "./components/RouteList.jsx";
 import CheckpointTable from "./components/CheckpointTable.jsx";
 import MapPanel from "./components/MapPanel.jsx";
+import { addHistory, loadHistory } from "./history.js";
+import WorstStretch from "./components/WorstStretch.jsx";
 
 export default function App() {
   const [result, setResult] = useState(null);
+  const focusOn = (p) => setFocus({ lat: p.lat, lng: p.lng, key: Date.now() });
   const [selectedId, setSelectedId] = useState(null);
   const [focus, setFocus] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [slow, setSlow] = useState(false);
+  const [history, setHistory] = useState(loadHistory);
   useEffect(() => {
     wakeServer();
   }, []);
@@ -26,11 +30,17 @@ export default function App() {
   async function run(payload) {
     setLoading(true);
     setError("");
+    setResult(null);
+    setSelectedId(null);
+    setFocus(null);
     try {
       const data = await analyzeTrip(payload);
       setResult(data);
       setSelectedId(data.recommended_route_id);
       setFocus(null);
+      setHistory(
+        addHistory({ origin: data.origin, destination: data.destination }),
+      );
     } catch (e) {
       setError(e.message);
     } finally {
@@ -56,7 +66,7 @@ export default function App() {
           </p>
         </header>
 
-        <TripForm onSubmit={run} loading={loading} />
+        <TripForm onSubmit={run} loading={loading} history={history} />
 
         {error && (
           <p className="error" role="alert">
@@ -89,13 +99,14 @@ export default function App() {
               onSelect={setSelectedId}
             />
             {selected && (
-              <CheckpointTable
-                route={selected}
-                interval={result.interval_miles}
-                onFocus={(cp) =>
-                  setFocus({ lat: cp.lat, lng: cp.lng, key: Date.now() })
-                }
-              />
+              <>
+                <WorstStretch route={selected} onFocus={focusOn} />
+                <CheckpointTable
+                  route={selected}
+                  interval={result.interval_miles}
+                  onFocus={focusOn}
+                />
+              </>
             )}
           </>
         )}
