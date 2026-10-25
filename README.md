@@ -10,6 +10,12 @@ Weather-aware truck routing. Enter where you are going, when you leave and how h
 
 ## What it does
 
+![ClearHaul demo: the truck moves along the route as the forecast slider moves](docs/clear-haul.gif)
+
+| Route comparison                                         | Heatmap and truck                                 | Worst stretch                                 |
+| -------------------------------------------------------- | ------------------------------------------------- | --------------------------------------------- |
+| ![Three routes with a recommendation](docs/overview.png) | ![Heatmap with the truck](docs/heatmap-truck.png) | ![Worst stretch sign](docs/worst-stretch.png) |
+
 1. You enter an origin, a destination, a departure time, a load weight, and how often to sample the weather (every 10, 25 or 50 miles).
 2. The backend gets up to three different routes from OSRM.
 3. For each route it places checkpoints along the road and works out when the truck will reach each one.
