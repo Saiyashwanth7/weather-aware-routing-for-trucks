@@ -974,3 +974,8 @@ tbody tr:hover {
 .heat.minimized .heat-head {
   margin-bottom: 0;
 }
+.hint,
+.tz-note {
+  color: #587079;
+  font-size: 0.8rem;
+}

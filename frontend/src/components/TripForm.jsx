@@ -1,5 +1,6 @@
 import { useState } from "react";
 import PlaceInput from "./PlaceInput.jsx";
+import { userTimeZone } from "../utils.js";
 
 function defaultDeparture() {
   const d = new Date(Date.now() + 60 * 60 * 1000);
@@ -105,6 +106,7 @@ export default function TripForm({ onSubmit, loading, history = [] }) {
             onChange={(e) => setDeparture(e.target.value)}
             required
           />
+          <small className="hint">Your time zone: {userTimeZone}</small>
         </div>
         <div className="field">
           <label htmlFor="load">Load weight (lb)</label>

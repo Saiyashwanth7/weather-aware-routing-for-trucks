@@ -7,6 +7,7 @@ import MapPanel from "./components/MapPanel.jsx";
 import { addHistory, loadHistory } from "./history.js";
 import WorstStretch from "./components/WorstStretch.jsx";
 import PanelResizer from "./components/PanelResizer.jsx";
+import { userTimeZone } from "./utils.js";
 
 export default function App() {
   const [result, setResult] = useState(null);
@@ -100,6 +101,9 @@ export default function App() {
                 </p>
               ))}
             </section>
+            <p className="tz-note">
+              All times are in your time zone ({userTimeZone}).
+            </p>
             <RouteList
               routes={result.routes}
               selectedId={selectedId}
