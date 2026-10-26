@@ -128,6 +128,22 @@ export default function MapView({
     };
   }, []);
 
+  // Tell Leaflet when the map box changes size (side panel dragged or hidden).
+  useEffect(() => {
+    let frame = 0;
+    const watcher = new ResizeObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(
+        () => mapRef.current && mapRef.current.invalidateSize(),
+      );
+    });
+    watcher.observe(elRef.current);
+    return () => {
+      cancelAnimationFrame(frame);
+      watcher.disconnect();
+    };
+  }, []);
+
   // New analysis: rebuild route lines, heat slices and end pins.
   useEffect(() => {
     const map = mapRef.current;

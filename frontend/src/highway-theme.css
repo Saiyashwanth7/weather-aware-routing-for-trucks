@@ -880,3 +880,97 @@ tbody tr:hover {
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.6);
 }
+
+/* ===== Resizable and hideable side panel, movable forecast panel ===== */
+.app {
+  grid-template-columns: var(--panel-w, 420px) 1fr;
+}
+.panel {
+  min-width: 0;
+}
+
+/* Drag handle on the left edge of the map, and the tab that hides the side panel */
+.resizer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  z-index: 1300;
+  cursor: col-resize;
+  touch-action: none;
+}
+.resizer:hover,
+.resizer:focus-visible {
+  background: rgba(0, 0, 0, 0.18);
+}
+.panel-toggle {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1300;
+  width: 22px;
+  height: 56px;
+  padding: 0;
+  border: 2px solid #111111;
+  border-left: 0;
+  border-radius: 0 8px 8px 0;
+  background: #ffffff;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+.panel-toggle:hover {
+  background: #fff6cc;
+}
+
+@media (min-width: 901px) {
+  .app.collapsed .panel {
+    visibility: hidden;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+  }
+}
+@media (max-width: 900px) {
+  .resizer,
+  .panel-toggle {
+    display: none;
+  }
+}
+
+/* Forecast panel: the header is the drag handle */
+.heat-head {
+  align-items: center;
+  gap: 8px;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.heat-head:active {
+  cursor: grabbing;
+}
+.heat-grip {
+  color: #587079;
+  letter-spacing: -2px;
+}
+.heat-time {
+  margin-left: auto;
+}
+.heat-min {
+  border: 0;
+  background: none;
+  padding: 2px 6px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+.heat.minimized {
+  width: auto;
+  max-width: min(460px, calc(100% - 24px));
+  padding-bottom: 8px;
+}
+.heat.minimized .heat-head {
+  margin-bottom: 0;
+}

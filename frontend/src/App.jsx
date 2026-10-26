@@ -6,6 +6,7 @@ import CheckpointTable from "./components/CheckpointTable.jsx";
 import MapPanel from "./components/MapPanel.jsx";
 import { addHistory, loadHistory } from "./history.js";
 import WorstStretch from "./components/WorstStretch.jsx";
+import PanelResizer from "./components/PanelResizer.jsx";
 
 export default function App() {
   const [result, setResult] = useState(null);
@@ -16,6 +17,9 @@ export default function App() {
   const [error, setError] = useState("");
   const [slow, setSlow] = useState(false);
   const [history, setHistory] = useState(loadHistory);
+  const [panelWidth, setPanelWidth] = useState(420);
+  const [panelOpen, setPanelOpen] = useState(true);
+
   useEffect(() => {
     wakeServer();
   }, []);
@@ -56,7 +60,10 @@ export default function App() {
     : null;
 
   return (
-    <div className="app">
+    <div
+      className={`app${panelOpen ? "" : " collapsed"}`}
+      style={{ "--panel-w": panelOpen ? `${panelWidth}px` : "0px" }}
+    >
       <aside className="panel">
         <header className="brand">
           <h1>Weather-aware truck routing</h1>
@@ -113,6 +120,12 @@ export default function App() {
       </aside>
 
       <main className="stage">
+        <PanelResizer
+          width={panelWidth}
+          onWidth={setPanelWidth}
+          open={panelOpen}
+          onToggle={() => setPanelOpen((o) => !o)}
+        />
         <MapPanel
           result={result}
           selectedId={selectedId}

@@ -1,11 +1,9 @@
-export const LEVELS = ["Low", "Moderate", "High", "Severe", "No Travel"];
-export const COLORS = ["#2f9e5b", "#e3b505", "#ef8a1f", "#d7372b", "#6b21a8"];
-export const ROUTE_COLORS = ["#1d4ed8", "#0e7490", "#374151"];
-export const NO_DATA_COLOR = "#9aa5ad";
+export const LEVELS = ['Low', 'Moderate', 'High', 'Severe', 'No Travel'];
+export const COLORS = ['#2f9e5b', '#e3b505', '#ef8a1f', '#d7372b', '#6b21a8'];
+export const ROUTE_COLORS = ['#1d4ed8', '#0e7490', '#374151'];
+export const NO_DATA_COLOR = '#9aa5ad';
 
-const RGB = COLORS.map((hex) =>
-  [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)),
-);
+const RGB = COLORS.map((hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)));
 
 /** Smooth colour for a fractional risk level (0 = Low ... 4 = No Travel). */
 export function colorAt(v) {
@@ -17,36 +15,21 @@ export function colorAt(v) {
 }
 
 export function esc(s) {
-  return String(s).replace(
-    /[&<>"']/g,
-    (ch) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
-        ch
-      ],
-  );
+  return String(s).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 }
 
 export function fmtDuration(minutes) {
   const h = Math.floor(minutes / 60);
   const m = Math.round(minutes % 60);
-  return h ? `${h}h ${String(m).padStart(2, "0")}m` : `${m}m`;
+  return h ? `${h}h ${String(m).padStart(2, '0')}m` : `${m}m`;
 }
 
 export function fmtDateTime(value) {
-  return new Date(value).toLocaleString([], {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  return new Date(value).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
 export function fmtTime(value) {
-  return new Date(value).toLocaleTimeString([], {
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  return new Date(value).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
 /** [lat, lng] at `mile` along a path of [lat, lng, mile] vertices. */
@@ -129,9 +112,7 @@ export function mileAtTime(checkpoints, whenMs) {
   }
   const span = times[hi] - times[lo];
   const f = span > 0 ? (whenMs - times[lo]) / span : 0;
-  return (
-    checkpoints[lo].mile + f * (checkpoints[hi].mile - checkpoints[lo].mile)
-  );
+  return checkpoints[lo].mile + f * (checkpoints[hi].mile - checkpoints[lo].mile);
 }
 
 /**
@@ -144,10 +125,7 @@ export function truckState(route, hour, heatBaseIso) {
   const mile = mileAtTime(cps, when);
   const latlng = pointAt(route.path, mile);
   const ahead = pointAt(route.path, mile + 2);
-  const { a, b, f } = bracket(
-    cps.map((c) => c.mile),
-    mile,
-  );
+  const { a, b, f } = bracket(cps.map((c) => c.mile), mile);
   return {
     mile,
     latlng,
@@ -171,8 +149,7 @@ export function worstStretch(route) {
 
   const last = cps.length - 1;
   const startEdge = (i) => (i === 0 ? 0 : (cps[i - 1].mile + cps[i].mile) / 2);
-  const endEdge = (i) =>
-    i === last ? route.distance_miles : (cps[i].mile + cps[i + 1].mile) / 2;
+  const endEdge = (i) => (i === last ? route.distance_miles : (cps[i].mile + cps[i + 1].mile) / 2);
 
   let best = null;
   let i = 0;
@@ -201,3 +178,5 @@ export function worstStretch(route) {
     focus: { lat: middle.lat, lng: middle.lng },
   };
 }
+
+export const clamp = (value, min, max) => Math.min(max, Math.max(min, value));

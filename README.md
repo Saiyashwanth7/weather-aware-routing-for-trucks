@@ -4,7 +4,7 @@ Weather-aware truck routing. Enter where you are going, when you leave and how h
 
 - **Live app:** https://clear-haul-two.vercel.app/
 - **API health check:** https://clearhaul-8di8.onrender.com/api/health
-- **Walkthrough videos:** <!-- `<main Loom link>`--> Soon... (short overview, with the backend and frontend deep dives linked in its description)
+- **Walkthrough videos:** `<main Loom link>` (short overview, with the backend and frontend deep dives linked in its description)
 
 > The backend runs on a free hosting tier. If nobody used it for a while, the first request can take up to 30 seconds while the server wakes up. A free monitor pings it every 5 minutes, and the page wakes it as soon as it opens, so this should rarely happen.
 
@@ -29,9 +29,11 @@ Smaller things that make it easier to use:
 
 - **Recent trips:** the last 4 successful trips appear as chips under the form. One click fills in origin and destination.
 - **Swap button:** flips origin and destination.
+- **Room for the map:** drag the edge of the side panel to resize it, or hide it completely with the tab on the map's edge. The forecast panel can be dragged anywhere on the map and shrunk to a single line. They work independently, so a long route can fill the whole screen.
 - **No stale results:** every new search clears the previous trip first, so an error (for example a place with no road connection) never leaves old routes on screen.
 - **Plain explanations:** every checkpoint says which condition caused its risk level (for example "wind, rain"), and the load rule is shown when the load made it worse.
 - **Colour plus text:** risk is always written out as well as coloured.
+- **Room for the map:** on a long route the panels can get in the way, so they move. Drag the edge of the side panel to resize it (arrow keys work too), or hide it completely with the tab on the edge of the map. The forecast panel can be dragged anywhere on the map and shrunk to a single line. Double-click its header to put it back.
 
 The interface uses a highway sign look: the recommendation is a green guide sign, route options are white regulatory signs, the main action is a yellow warning-style button, and the worst stretch is a yellow warning sign (red for Severe and No Travel). Risk colours are kept the same everywhere so the map legend always matches.
 
@@ -78,6 +80,9 @@ Putting No Travel first is an addition to the brief's list. Without it a route w
 - **The truck position is calculated, not animated by the server.** The frontend interpolates between the checkpoint arrival times to find the mile the truck is at, then finds that point on the route line.
 - **The worst stretch is worked out in the browser** from data the backend already sends (risk level, mile, arrival time and cause of each checkpoint). It takes the longest run of neighbouring checkpoints at the route's highest level, and measures it with the same "halfway to the neighbours" miles as the backend, so it agrees with the Severe and High miles on the route cards.
 - **Three routes, even when OSRM returns one.** If OSRM returns fewer than three, the backend asks for routes through points pushed sideways from the midpoint, and keeps only the ones that are really different.
+- **The map is told when its box changes size.** Leaflet only measures its container once, so the map recalculates its size (at most once per frame) whenever the side panel is dragged or hidden.
+- **Plain React and hand-written CSS.** There is no UI component library and no state library. The look is a custom highway-sign theme and the map is Leaflet, so a component library would have added weight without helping. State lives in React hooks, and the slider hour lives in one small component so dragging it does not re-render the sidebar.
+- **The map follows its box.** When the side panel is resized or hidden, the map is told its size changed (a `ResizeObserver` calls Leaflet's `invalidateSize`), so tiles and routes stay correct.
 - **Failures are explained.** Upstream problems (place not found, no road between the places, weather service down) come back as a readable error message instead of a crash. Temporary errors are retried.
 - **Recent trips stay in your browser.** They are saved in `localStorage` only after a successful search, using the coordinates the backend resolved. Nothing is sent to a server.
 
@@ -96,7 +101,7 @@ backend/
 frontend/
   public/                logo and favicon
   src/
-    components/          MapView, MapPanel, HeatControls, TripForm, PlaceInput, RouteList, WorstStretch, CheckpointTable
+    components/          MapView, MapPanel, HeatControls, PanelResizer, TripForm, PlaceInput, RouteList, WorstStretch, CheckpointTable, PanelResizer
     api.js               calls the backend
     history.js           recent trips (localStorage)
     utils.js             colours, route slicing, truck position, worst stretch
@@ -195,8 +200,6 @@ Ideas I did not build, in the order I would do them:
 
 Routing by [OSRM](https://project-osrm.org), weather by [Open-Meteo](https://open-meteo.com), place search by Open-Meteo geocoding and Nominatim, map data by [OpenStreetMap](https://www.openstreetmap.org) contributors, map display by [Leaflet](https://leafletjs.com).
 
-<!--
 ## About how this was built
 
 I used Claude (Anthropic) as an AI assistant for design discussion, code review and parts of the implementation. The walkthrough videos explain how the code works.
--->
