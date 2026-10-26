@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import math
 from datetime import timedelta, timezone
+
 
 from ..clients.weather import ForecastGrid, fetch_grid
 from ..domain.checkpoints import build_checkpoints, segment_miles
@@ -9,17 +11,26 @@ from ..domain.recommend import recommend
 from ..domain.risk import assess_checkpoint
 from ..domain.types import RiskLevel
 
-HEAT_HOURS = 48  # the heatmap slider covers departure + 0..48 h
+HEAT_HOURS = 48  # the brief's slider: departure + 0..48 h, the least we always offer
+MAX_HEAT_HOURS = (
+    120  # a long trip stretches the slider to its end, but never past 5 days
+)
 
 
 def iso(dt):
     return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def _heat_series(forecast, checkpoint, base, load_lb):
+def _heat_hours(paths):
+    """Slider length: at least 48 hours, and long enough for the truck to reach the end of the longest route."""
+    longest_hours = max(path.total_seconds for path in paths) / 3600
+    return min(MAX_HEAT_HOURS, max(HEAT_HOURS, math.ceil(longest_hours)))
+
+
+def _heat_series(forecast, checkpoint, base, load_lb, heat_hours):
     """Risk level at this checkpoint for each hour of the slider (-1 = no forecast)."""
     series = []
-    for hour in range(HEAT_HOURS + 1):
+    for hour in range(heat_hours + 1):
         weather = forecast.at(
             checkpoint.lat, checkpoint.lng, base + timedelta(hours=hour)
         )
@@ -29,7 +40,10 @@ def _heat_series(forecast, checkpoint, base, load_lb):
     return series
 
 
-def _route_result(idx, path, checkpoints, forecast, base, departure, load_lb):
+def _route_result(
+    idx, path, checkpoints, forecast, base, departure, load_lb, heat_hours
+):
+
     total = path.total_miles
     seg = segment_miles([c.mile for c in checkpoints], total)
     miles_by_level = {level: 0.0 for level in RiskLevel}
@@ -66,7 +80,7 @@ def _route_result(idx, path, checkpoints, forecast, base, departure, load_lb):
                 "gust_mph": round(wx.gust_mph, 1) if wx is not None else None,
                 "rain_in_hr": round(wx.rain_in_hr, 2) if wx is not None else None,
                 "snow_in_hr": round(wx.snow_in_hr, 2) if wx is not None else None,
-                "heat": _heat_series(forecast, cp, base, load_lb),
+                "heat": _heat_series(forecast, cp, base, load_lb, heat_hours),
             }
         )
 
@@ -119,20 +133,21 @@ def analyze_routes(routes, departure, load_lb, interval, fetch=fetch_grid):
         prepared.append((path, build_checkpoints(path, departure, interval)))
 
     last_eta = max(cp.eta for _, cps in prepared for cp in cps)
+    heat_hours = _heat_hours([path for path, _ in prepared])
     window_end = max(
-        base + timedelta(hours=HEAT_HOURS + 1), last_eta + timedelta(hours=1)
+        base + timedelta(hours=heat_hours + 1), last_eta + timedelta(hours=1)
     )
     points = [(cp.lat, cp.lng) for _, cps in prepared for cp in cps]
     forecast = ForecastGrid(fetch(points, base.date(), window_end.date()))
 
     results = [
-        _route_result(i, path, cps, forecast, base, departure, load_lb)
+        _route_result(i, path, cps, forecast, base, departure, load_lb, heat_hours)
         for i, (path, cps) in enumerate(prepared)
     ]
     recommended_id, recommendation = recommend(results)
     return {
         "heat_base": iso(base),
-        "heat_hours": HEAT_HOURS,
+        "heat_hours": heat_hours,
         "recommended_route_id": recommended_id,
         "recommendation": recommendation,
         "routes": results,
