@@ -4,13 +4,12 @@ Weather-aware truck routing. Enter where you are going, when you leave and how h
 
 - **Live app:** https://clear-haul-two.vercel.app/
 - **API health check:** https://clearhaul-8di8.onrender.com/api/health
-- **Walkthrough videos:** `<main Loom link>` (short overview, with the backend and frontend deep dives linked in its description)
-
-> The backend runs on a free hosting tier. If nobody used it for a while, the first request can take up to 30 seconds while the server wakes up. A free monitor pings it every 5 minutes, and the page wakes it as soon as it opens, so this should rarely happen.
+- **Walkthrough videos:** https://www.loom.com/share/37036451e03e403db88c37b992315c3b
+  > The backend runs on a free hosting tier. If nobody used it for a while, the first request can take up to 30 seconds while the server wakes up. A free monitor pings it every 5 minutes, and the page wakes it as soon as it opens, so this should rarely happen.
 
 ## What it does
 
-![ClearHaul demo: the truck moves along the route as the forecast slider moves](docs/clear-haul.gif)
+![ClearHaul demo: the truck moves along the route as the forecast slider moves](docs\clear-haul-demo.gif)
 
 | Route comparison                                         | Heatmap and truck                                 | Worst stretch                                 |
 | -------------------------------------------------------- | ------------------------------------------------- | --------------------------------------------- |
@@ -36,6 +35,31 @@ Smaller things that make it easier to use:
 - **Room for the map:** on a long route the panels can get in the way, so they move. Drag the edge of the side panel to resize it (arrow keys work too), or hide it completely with the tab on the edge of the map. The forecast panel can be dragged anywhere on the map and shrunk to a single line. Double-click its header to put it back.
 
 The interface uses a highway sign look: the recommendation is a green guide sign, route options are white regulatory signs, the main action is a yellow warning-style button, and the worst stretch is a yellow warning sign (red for Severe and No Travel). Risk colours are kept the same everywhere so the map legend always matches.
+
+## Architecture
+
+![Request flow: the browser sends a trip, the backend validates it, finds places and three routes, analyses each route with weather data, and returns JSON](docs\backend_request_flow.png)
+
+The backend has four layers. Dependencies point one way: the API uses services, services use clients and the domain, and the domain uses nothing from the others.
+
+| Layer    | Folder              | What it does                                                                                   |
+| -------- | ------------------- | ---------------------------------------------------------------------------------------------- |
+| API      | `routing/api/`      | Checks the request, calls the planner, and turns errors into readable messages                 |
+| Services | `routing/services/` | `trip_planner.py` joins the steps for every route and builds the response                      |
+| Clients  | `routing/clients/`  | The only code that talks to other websites (places, routes, weather), with retries and a cache |
+| Domain   | `routing/domain/`   | Pure Python: risk rules, distances along a route, checkpoints, ranking. No Django, no HTTP     |
+
+For each route, the trip planner does six steps:
+
+![The six steps for one route: path, checkpoints, forecast lookup, checkpoint risk, route summary and recommendation](docs\analyze_routes_steps.png)
+
+1. **Path** turns the route line into "where is the truck, and at what time, at mile X".
+2. **Checkpoints** are placed every 10, 25 or 50 miles, each with an arrival time.
+3. **Forecast lookup** reads the weather at each checkpoint for that arrival time. All forecasts for the trip are fetched in one batch first.
+4. **Checkpoint risk** applies the wind, rain and snow rules, then the load rules.
+5. **Route summary** adds up the miles at each risk level and the average risk.
+6. **Recommend** compares the routes and explains the choice.
+   Because the domain layer has no outside dependencies, every rule can be tested without a network, and the whole pipeline can be tested with a fake forecast.
 
 ## How the risk is calculated
 
@@ -185,6 +209,7 @@ Backend environment variables:
 - **Rain is rain plus showers**, and snow is Open-Meteo's hourly snowfall, both in inches per hour.
 - **The heatmap is an approximation.** It blends the risk between neighbouring checkpoints. It is not a radar image.
 - **The cache lives in memory** of one server process, which is enough for this deployment.
+- **Times are shown in your browser's time zone.** The departure time you enter is read in that time zone too, and the app says so on screen. Showing each checkpoint in its own local time would be better for real drivers.
 
 ## If this were built for real drivers
 
