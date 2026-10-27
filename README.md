@@ -9,7 +9,7 @@ Weather-aware truck routing. Enter where you are going, when you leave and how h
 
 ## What it does
 
-![ClearHaul demo: the truck moves along the route as the forecast slider moves](docs\clear-haul-demo.gif)
+![ClearHaul demo: the truck moves along the route as the forecast slider moves](docs/clear-haul-demo.gif)
 
 | Route comparison                                         | Heatmap and truck                                 | Worst stretch                                 |
 | -------------------------------------------------------- | ------------------------------------------------- | --------------------------------------------- |
@@ -38,7 +38,7 @@ The interface uses a highway sign look: the recommendation is a green guide sign
 
 ## Architecture
 
-![Request flow: the browser sends a trip, the backend validates it, finds places and three routes, analyses each route with weather data, and returns JSON](docs\backend_request_flow.png)
+![Request flow: the browser sends a trip, the backend validates it, finds places and three routes, analyses each route with weather data, and returns JSON](docs/backend_request_flow.png)
 
 The backend has four layers. Dependencies point one way: the API uses services, services use clients and the domain, and the domain uses nothing from the others.
 
@@ -51,7 +51,7 @@ The backend has four layers. Dependencies point one way: the API uses services, 
 
 For each route, the trip planner does six steps:
 
-![The six steps for one route: path, checkpoints, forecast lookup, checkpoint risk, route summary and recommendation](docs\analyze_routes_steps.png)
+![The six steps for one route: path, checkpoints, forecast lookup, checkpoint risk, route summary and recommendation](docs/analyze_routes_steps.png)
 
 1. **Path** turns the route line into "where is the truck, and at what time, at mile X".
 2. **Checkpoints** are placed every 10, 25 or 50 miles, each with an arrival time.
